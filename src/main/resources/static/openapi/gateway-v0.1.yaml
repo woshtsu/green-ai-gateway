@@ -1,0 +1,102 @@
+openapi: 3.1.0
+info:
+  title: Green AI API Gateway
+  version: 0.1.0
+  description: Superficie externa confirmada. Las respuestas funcionales conservan el contrato de Monitoring v0.1.
+servers:
+  - url: /
+paths:
+  /api/monitoring/v1/metrics/catalog:
+    get:
+      operationId: getMetricCatalog
+      summary: Obtiene el catálogo de métricas permitido
+      responses:
+        '200':
+          description: Catálogo definido por Monitoring v0.1
+        '502':
+          $ref: '#/components/responses/GatewayFailure'
+        '503':
+          $ref: '#/components/responses/GatewayFailure'
+        '504':
+          $ref: '#/components/responses/GatewayFailure'
+  /api/monitoring/v1/metrics/current:
+    get:
+      operationId: getCurrentMetrics
+      summary: Consulta métricas actuales normalizadas
+      parameters:
+        - $ref: '#/components/parameters/metric'
+        - $ref: '#/components/parameters/resourceType'
+        - $ref: '#/components/parameters/cluster'
+        - $ref: '#/components/parameters/resourceId'
+      responses:
+        '200':
+          description: MetricsResponse definido por Monitoring v0.1
+        '400':
+          $ref: '#/components/responses/UpstreamProblem'
+        '422':
+          $ref: '#/components/responses/UpstreamProblem'
+        '502':
+          $ref: '#/components/responses/GatewayFailure'
+        '503':
+          $ref: '#/components/responses/GatewayFailure'
+        '504':
+          $ref: '#/components/responses/GatewayFailure'
+  /api/monitoring/v1/metrics/history:
+    get:
+      operationId: getMetricHistory
+      summary: Consulta métricas históricas normalizadas
+      parameters:
+        - $ref: '#/components/parameters/metric'
+        - $ref: '#/components/parameters/resourceType'
+        - $ref: '#/components/parameters/cluster'
+        - $ref: '#/components/parameters/resourceId'
+        - name: start
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: end
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: stepSeconds
+          in: query
+          schema: {type: integer, minimum: 15, maximum: 3600, default: 15}
+      responses:
+        '200':
+          description: MetricsResponse definido por Monitoring v0.1
+        '400':
+          $ref: '#/components/responses/UpstreamProblem'
+        '422':
+          $ref: '#/components/responses/UpstreamProblem'
+        '502':
+          $ref: '#/components/responses/GatewayFailure'
+        '503':
+          $ref: '#/components/responses/GatewayFailure'
+        '504':
+          $ref: '#/components/responses/GatewayFailure'
+components:
+  parameters:
+    metric:
+      name: metric
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [node.cpu.utilization, node.memory.used, node.network.receive, node.network.transmit, node.filesystem.used]
+    resourceType:
+      name: resourceType
+      in: query
+      schema: {type: string, const: node, default: node}
+    cluster:
+      name: cluster
+      in: query
+      schema: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'}
+    resourceId:
+      name: resourceId
+      in: query
+      schema: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'}
+  responses:
+    UpstreamProblem:
+      description: application/problem+json conservado desde Monitoring
+    GatewayFailure:
+      description: Fallo de Monitoring o de comunicación, sin detalles internos

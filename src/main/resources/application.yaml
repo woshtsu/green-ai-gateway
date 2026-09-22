@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: green-ai-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: monitoring-metrics
+              uri: ${GATEWAY_MONITORING_BASE_URL:http://127.0.0.1:8080}
+              predicates:
+                - Path=/api/monitoring/v1/metrics/catalog,/api/monitoring/v1/metrics/current,/api/monitoring/v1/metrics/history
+                - Method=GET
+              filters:
+                - StripPrefix=3
+                - PrefixPath=/api/v1
+          httpclient:
+            connect-timeout: 1000
+            response-timeout: 6s
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: ${GATEWAY_CORS_ALLOWED_ORIGIN:http://127.0.0.1:3000}
+                allowedMethods: GET
+                allowedHeaders: Accept,Content-Type,X-Request-Id,Authorization
+                exposedHeaders: X-Request-Id
+                allowCredentials: true
+                maxAge: 3600
+
+server:
+  port: ${GATEWAY_PORT:8081}
+  max-http-request-header-size: 16KB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+info:
+  app:
+    name: green-ai-gateway
+    version: 0.1.0
