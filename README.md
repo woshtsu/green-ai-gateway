@@ -52,6 +52,47 @@ La superficie externa está versionada en [gateway-v0.1.yaml](src/main/resources
 
 En Docker Compose usar `http://monitoring:8080`. En Kubernetes usar el DNS real del Service; nunca `localhost` entre contenedores o pods.
 
+## Conectar el Frontend
+
+El navegador debe usar como base pública del API `http://127.0.0.1:8081` y llamar únicamente a:
+
+```text
+GET /api/monitoring/v1/metrics/catalog
+GET /api/monitoring/v1/metrics/current
+GET /api/monitoring/v1/metrics/history
+```
+
+Ejemplo mínimo para el adaptador HTTP del Frontend:
+
+```javascript
+const gatewayBaseUrl = window.GREEN_AI_GATEWAY_URL ?? "http://127.0.0.1:8081";
+
+export async function getCurrentMetric(metric, filters = {}) {
+  const query = new URLSearchParams({ metric, resourceType: "node", ...filters });
+  const response = await fetch(
+    `${gatewayBaseUrl}/api/monitoring/v1/metrics/current?${query}`,
+    { headers: { Accept: "application/json" } },
+  );
+
+  if (!response.ok) {
+    const problem = await response.json().catch(() => ({}));
+    throw new Error(problem.detail ?? `HTTP ${response.status}`);
+  }
+  return response.json();
+}
+```
+
+El Frontend experimental debe reemplazar su base `/api` y dejar de consumir `/api/kpis`, `/api/logs`, `/api/hardware` y `/api/usuarios`. Primero obtiene las métricas disponibles desde `catalog`; después usa `current` para tarjetas y `history` para gráficos. No debe codificar nombres o unidades que ya entrega el contrato.
+
+Para desarrollo local, `GATEWAY_CORS_ALLOWED_ORIGIN` debe coincidir exactamente con el origen donde se abrió la página, incluido hostname y puerto. Por ejemplo, si el Frontend se abre en `http://localhost:3001`:
+
+```powershell
+$env:GATEWAY_CORS_ALLOWED_ORIGIN = 'http://localhost:3001'
+docker compose up --build
+```
+
+El compose del workspace usa `http://127.0.0.1:3001` por defecto y permite sobrescribirlo con esa variable. No se requiere Data Processing, Prediction ni Supabase para visualizar las métricas técnicas de Monitoring.
+
 ## Salud y observabilidad
 
 - `/actuator/health/liveness`
