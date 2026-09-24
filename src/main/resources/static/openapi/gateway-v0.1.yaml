@@ -5,6 +5,8 @@ info:
   description: Superficie externa confirmada. Las respuestas funcionales conservan el contrato de Monitoring v0.1.
 servers:
   - url: /
+security:
+  - bearerAuth: []
 paths:
   /api/monitoring/v1/metrics/catalog:
     get:
@@ -75,6 +77,12 @@ paths:
         '504':
           $ref: '#/components/responses/GatewayFailure'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT de Supabase Auth con user_role OPERATOR o ADMIN. Ausente/inválido devuelve 401; rol insuficiente, 403.
   parameters:
     metric:
       name: metric

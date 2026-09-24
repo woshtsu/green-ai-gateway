@@ -17,15 +17,6 @@ spring:
           httpclient:
             connect-timeout: 1000
             response-timeout: 6s
-          globalcors:
-            cors-configurations:
-              '[/**]':
-                allowedOrigins: ${GATEWAY_CORS_ALLOWED_ORIGIN:http://127.0.0.1:3000}
-                allowedMethods: GET
-                allowedHeaders: Accept,Content-Type,X-Request-Id,Authorization
-                exposedHeaders: X-Request-Id
-                allowCredentials: true
-                maxAge: 3600
 
 server:
   port: ${GATEWAY_PORT:8081}
@@ -41,6 +32,12 @@ management:
       probes:
         enabled: true
       show-details: never
+
+gateway:
+  auth:
+    issuer: ${GATEWAY_AUTH_ISSUER_URI}
+    jwks: ${GATEWAY_AUTH_JWK_SET_URI}
+    audience: authenticated
 
 info:
   app:

@@ -2,7 +2,7 @@ FROM maven:3.9.11-eclipse-temurin-21 AS build
 WORKDIR /workspace
 COPY pom.xml ./
 COPY src ./src
-RUN mvn -B -ntp package -DskipTests
+RUN mvn -B -ntp verify
 
 FROM eclipse-temurin:21-jre-jammy
 RUN useradd --system --uid 10001 --create-home gateway
