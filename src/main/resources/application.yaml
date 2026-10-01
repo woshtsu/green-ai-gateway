@@ -24,6 +24,18 @@ spring:
                 - PrefixPath=/api/v1
               metadata:
                 response-timeout: 15000
+            - id: prediction-inference
+              uri: ${GATEWAY_PREDICTION_BASE_URL:http://prediction:8000}
+              predicates:
+                - Path=/api/prediction/v1/predictions
+                - Method=POST
+              filters:
+                - StripPrefix=2
+                - name: RequestSize
+                  args:
+                    maxSize: 2MB
+              metadata:
+                response-timeout: 30000
           httpclient:
             connect-timeout: 1000
             response-timeout: 6s

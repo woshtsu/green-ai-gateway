@@ -27,6 +27,8 @@ class GatewayApplicationTests {
     }
     static final DisposableServer UPSTREAM = HttpServer.create().host("127.0.0.1").port(0)
         .handle((req,res) -> {
+            if (req.uri().equals("/v1/predictions")) return req.receive().aggregate().asString()
+                .flatMap(body -> res.header("Content-Type", "application/json").sendString(Mono.just(body)).then());
             if (req.uri().equals("/jwks")) return res.header("Content-Type", "application/json")
                 .sendString(Mono.just(new JWKSet(KEY.toPublicJWK()).toString()));
             res.header("X-Request-Id",req.requestHeaders().get("X-Request-Id"));
@@ -38,6 +40,7 @@ class GatewayApplicationTests {
     @DynamicPropertySource static void properties(DynamicPropertyRegistry p) {
         p.add("GATEWAY_MONITORING_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
         p.add("GATEWAY_DATA_PROCESSING_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
+        p.add("GATEWAY_PREDICTION_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
         p.add("gateway.auth.issuer", () -> ISSUER);
         p.add("gateway.auth.jwks", () -> "http://127.0.0.1:" + UPSTREAM.port() + "/jwks");
     }
@@ -119,4 +122,24 @@ class GatewayApplicationTests {
             .header("Access-Control-Request-Method","GET").exchange().expectStatus().isForbidden();
     }
     @Test void healthIsPublic() { client.get().uri("/actuator/health/liveness").exchange().expectStatus().isOk(); }
+    @Test void predictionPostIsAuthenticatedAndPreservesBody() throws Exception {
+        String path = "/api/prediction/v1/predictions";
+        String payload = "{\"datasetId\":\"test-dataset\",\"features\":[]}";
+        client.post().uri(path).exchange().expectStatus().isUnauthorized();
+        String forbidden = valid("ROOT");
+        client.post().uri(path).headers(h -> h.setBearerAuth(forbidden)).exchange().expectStatus().isForbidden();
+        for (String role : List.of("OPERATOR", "ADMIN")) {
+            String jwt = valid(role);
+            client.post().uri(path).headers(h -> h.setBearerAuth(jwt))
+                .header("Content-Type", "application/json").header("X-Request-Id", "prediction-test")
+                .bodyValue(payload).exchange().expectStatus().isOk()
+                .expectHeader().valueEquals("X-Request-Id", "prediction-test")
+                .expectBody(String.class).isEqualTo(payload);
+            client.get().uri(path).headers(h -> h.setBearerAuth(jwt)).exchange().expectStatus().isForbidden();
+        }
+        client.options().uri(path).header("Origin", "http://127.0.0.1:3001")
+            .header("Access-Control-Request-Method", "POST")
+            .header("Access-Control-Request-Headers", "authorization,content-type")
+            .exchange().expectStatus().isOk();
+    }
 }

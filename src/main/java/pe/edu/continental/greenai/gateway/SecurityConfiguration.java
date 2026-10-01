@@ -47,7 +47,7 @@ class SecurityConfiguration {
             @Value("${GATEWAY_CORS_ALLOWED_ORIGIN:http://127.0.0.1:3001}") String origin) {
         var cors = new CorsConfiguration();
         cors.setAllowedOrigins(List.of(origin));
-        cors.setAllowedMethods(List.of("GET", "OPTIONS"));
+        cors.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
         cors.setAllowedHeaders(List.of("Accept", "Content-Type", "Authorization", "X-Request-Id"));
         cors.setExposedHeaders(List.of("X-Request-Id"));
         cors.setMaxAge(3600L);
@@ -72,6 +72,8 @@ class SecurityConfiguration {
                     .hasAnyRole("OPERATOR", "ADMIN")
                 .pathMatchers(HttpMethod.GET, "/api/processing/v1/metrics/history",
                     "/api/processing/v1/historical-logs", "/api/processing/v1/prediction/dataset")
+                    .hasAnyRole("OPERATOR", "ADMIN")
+                .pathMatchers(HttpMethod.POST, "/api/prediction/v1/predictions")
                     .hasAnyRole("OPERATOR", "ADMIN")
                 .anyExchange().denyAll())
             .exceptionHandling(errors -> errors

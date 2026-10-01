@@ -8,6 +8,35 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /api/prediction/v1/predictions:
+    post:
+      operationId: createPrediction
+      summary: Estima CPU a partir de un dataset preparado por Data Processing
+      description: Modelo experimental. Requiere OPERATOR o ADMIN; máximo 2 MB y timeout 30 segundos. No se reintenta automáticamente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schemaVersion, datasetId, resource, period, features, origins, dataStatus]
+              properties:
+                schemaVersion: {type: string, const: '1.0'}
+                datasetId: {type: string}
+                resource: {type: object}
+                period: {type: object}
+                features: {type: array, items: {type: object}}
+                origins: {type: array, items: {type: string}}
+                dataStatus: {type: string}
+      responses:
+        '200': {description: Estimación de CPU con origin estimated, unidad %, modelo, horizonte y dataset de entrada}
+        '400': {description: Entrada inválida}
+        '401': {description: JWT ausente o inválido}
+        '403': {description: Rol insuficiente}
+        '413': {description: Cuerpo demasiado grande}
+        '422': {description: Datos insuficientes o inválidos}
+        '503': {description: Modelo o servicio no disponible}
+        '504': {description: Tiempo de espera excedido}
   /api/monitoring/v1/metrics/catalog:
     get:
       operationId: getMetricCatalog

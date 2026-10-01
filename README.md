@@ -1,6 +1,6 @@
 # Green AI — API Gateway
 
-Punto de entrada HTTP del Frontend para los microservicios Green AI. Publica rutas explícitas de Monitoring y Data Processing con sus contratos aprobados.
+Punto de entrada HTTP del Frontend para los microservicios Green AI. Publica rutas explícitas de Monitoring, Data Processing y Prediction con sus contratos aprobados.
 
 Java 21 · Spring Boot 4.1.1 · Spring Cloud 2025.1.3 · Gateway Server WebFlux.
 
@@ -11,8 +11,9 @@ El Gateway enruta, reescribe prefijos, aplica CORS/timeouts y mantiene correlaci
 ```text
 Frontend → Gateway → Monitoring
                    → Data Processing
+                   → Prediction
 
-Data Processing → Monitoring / Supabase / Prediction
+Data Processing → Monitoring / Supabase
 ```
 
 ## Ejecutar
@@ -43,6 +44,7 @@ Invoke-RestMethod 'http://127.0.0.1:8081/api/monitoring/v1/metrics/current?metri
 | `GET /api/processing/v1/metrics/history` | `/api/v1/metrics/history` |
 | `GET /api/processing/v1/historical-logs` | `/api/v1/historical-logs` |
 | `GET /api/processing/v1/prediction/dataset` | `/api/v1/prediction/dataset` |
+| `POST /api/prediction/v1/predictions` | `/v1/predictions` |
 
 Los query parameters se conservan. No existe un proxy comodín. Las rutas de Monitoring y Data Processing exigen JWT: 401 sin token válido, 403 sin rol autorizado o para rutas/métodos no permitidos con sesión válida. El Gateway conserva las respuestas funcionales y los errores contractuales de los servicios. Data Processing recibe un timeout del Gateway de 15 segundos, superior a su timeout interno de 10 segundos.
 
@@ -50,7 +52,9 @@ Los query parameters se conservan. No existe un proxy comodín. Las rutas de Mon
 
 Validación obligatoria: firma ES256/RS256 por JWKS, issuer exacto, audience authenticated, expiración, subject y usuario no anónimo. El claim user_role debe ser OPERATOR o ADMIN; no existe rol por defecto ni bypass. Configurar el Custom Access Token Hook antes de usar el dashboard.
 
-Las consultas PowerShell de este README requieren la cabecera Authorization con Bearer y un access token. No pegar tokens en documentación ni Git. Health y OpenAPI son públicos; el resto se deniega salvo las rutas GET documentadas. Actuator prometheus queda sin exposición pública autorizada.
+Las consultas PowerShell de este README requieren la cabecera Authorization con Bearer y un access token. No pegar tokens en documentación ni Git. Health y OpenAPI son públicos; solo se permiten las rutas y métodos documentados. Actuator prometheus queda sin exposición pública autorizada.
+
+Prediction usa `GATEWAY_PREDICTION_BASE_URL` (por defecto `http://prediction:8000`), timeout de 30 s, máximo 2 MB y roles OPERATOR/ADMIN. CORS permite POST; no hay reintentos de inferencia. El prefijo externo se reescribe a `/v1/predictions`. El panel primero obtiene el dataset de Data Processing y después lo envía a Prediction; Gateway no ejecuta la preparación ni el modelo.
 
 El Dockerfile ejecuta las pruebas durante la compilación con Java 21. Incluyen firma ES256 real con JWKS de prueba, expiración, issuer/audience incorrectos, roles, rutas y preflight CORS. No llaman al proyecto Supabase real.
 
