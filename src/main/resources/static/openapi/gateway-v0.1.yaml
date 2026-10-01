@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Green AI API Gateway
   version: 0.1.0
-  description: Superficie externa confirmada. Las respuestas funcionales conservan el contrato de Monitoring v0.1.
+  description: Superficie externa confirmada para Monitoring y Data Processing. Se conservan los contratos funcionales upstream.
 servers:
   - url: /
 security:
@@ -76,6 +76,96 @@ paths:
           $ref: '#/components/responses/GatewayFailure'
         '504':
           $ref: '#/components/responses/GatewayFailure'
+  /api/processing/v1/metrics/history:
+    get:
+      operationId: getProcessedMetricHistory
+      summary: Consulta historial de métricas procesado
+      description: Conserva contrato y validación de Data Processing v1.
+      parameters:
+        - $ref: '#/components/parameters/metric'
+        - name: start
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: end
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - $ref: '#/components/parameters/resourceType'
+        - $ref: '#/components/parameters/cluster'
+        - $ref: '#/components/parameters/resourceId'
+        - name: stepSeconds
+          in: query
+          schema: {type: integer, minimum: 15, maximum: 3600, default: 15}
+      responses:
+        '200': {description: ProcessedHistory de Data Processing v1}
+        '422': {$ref: '#/components/responses/UpstreamProblem'}
+        '500': {$ref: '#/components/responses/UpstreamProblem'}
+        '502': {$ref: '#/components/responses/UpstreamProblem'}
+        '503': {$ref: '#/components/responses/UpstreamProblem'}
+        '504': {$ref: '#/components/responses/GatewayFailure'}
+  /api/processing/v1/historical-logs:
+    get:
+      operationId: getHistoricalLogs
+      summary: Consulta logs históricos paginados
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: end
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: hardwareId
+          in: query
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 20}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 500, default: 100}
+        - name: cursor
+          in: query
+          schema: {type: string, maxLength: 2048}
+      responses:
+        '200': {description: HistoricalPage de Data Processing v1}
+        '422': {$ref: '#/components/responses/UpstreamProblem'}
+        '500': {$ref: '#/components/responses/UpstreamProblem'}
+        '502': {$ref: '#/components/responses/UpstreamProblem'}
+        '503': {$ref: '#/components/responses/UpstreamProblem'}
+        '504': {$ref: '#/components/responses/GatewayFailure'}
+  /api/processing/v1/prediction/dataset:
+    get:
+      operationId: getPredictionDataset
+      summary: Prepara un dataset para predicción
+      description: Contrato provisional; prepara datos y no ejecuta inferencia.
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: end
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: cluster
+          in: query
+          required: true
+          schema: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'}
+        - name: resourceId
+          in: query
+          required: true
+          schema: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'}
+        - name: stepSeconds
+          in: query
+          schema: {type: integer, minimum: 15, maximum: 3600, default: 15}
+      responses:
+        '200': {description: PredictionDataset de Data Processing v1}
+        '422': {$ref: '#/components/responses/UpstreamProblem'}
+        '500': {$ref: '#/components/responses/UpstreamProblem'}
+        '502': {$ref: '#/components/responses/UpstreamProblem'}
+        '503': {$ref: '#/components/responses/UpstreamProblem'}
+        '504': {$ref: '#/components/responses/GatewayFailure'}
 components:
   securitySchemes:
     bearerAuth:
@@ -105,6 +195,6 @@ components:
       schema: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'}
   responses:
     UpstreamProblem:
-      description: application/problem+json conservado desde Monitoring
+      description: application/problem+json conservado desde el servicio upstream
     GatewayFailure:
-      description: Fallo de Monitoring o de comunicación, sin detalles internos
+      description: Fallo del servicio upstream o de comunicación, sin detalles internos

@@ -29,11 +29,15 @@ class GatewayApplicationTests {
         .handle((req,res) -> {
             if (req.uri().equals("/jwks")) return res.header("Content-Type", "application/json")
                 .sendString(Mono.just(new JWKSet(KEY.toPublicJWK()).toString()));
-            return res.header("X-Request-Id",req.requestHeaders().get("X-Request-Id"))
-                .sendString(Mono.just(req.uri()));
+            res.header("X-Request-Id",req.requestHeaders().get("X-Request-Id"));
+            if (req.uri().startsWith("/api/v1/prediction/dataset"))
+                return res.status(422).header("Content-Type", "application/problem+json")
+                    .sendString(Mono.just("{\"status\":422,\"detail\":\"invalid query\"}"));
+            return res.sendString(Mono.just(req.uri()));
         }).bindNow();
     @DynamicPropertySource static void properties(DynamicPropertyRegistry p) {
         p.add("GATEWAY_MONITORING_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
+        p.add("GATEWAY_DATA_PROCESSING_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
         p.add("gateway.auth.issuer", () -> ISSUER);
         p.add("gateway.auth.jwks", () -> "http://127.0.0.1:" + UPSTREAM.port() + "/jwks");
     }
@@ -80,6 +84,29 @@ class GatewayApplicationTests {
         var jwt=valid("ADMIN");
         client.post().uri("/api/monitoring/v1/metrics/current").headers(h -> h.setBearerAuth(jwt)).exchange().expectStatus().isForbidden();
         client.get().uri("/api/processing/v1/anything").headers(h -> h.setBearerAuth(jwt)).exchange().expectStatus().isForbidden();
+    }
+    @Test void processingRoutesRequireRoleAndForwardContractPathsAndQueries() throws Exception {
+        var logs = java.net.URI.create("http://127.0.0.1:" + port + "/api/processing/v1/historical-logs?start=2026-09-01T00:00:00Z&end=2026-09-02T00:00:00Z&hardwareId=HW-42&limit=25&cursor=next%2Bpage");
+        client.get().uri(logs).exchange().expectStatus().isUnauthorized();
+        for (String role : List.of("OPERATOR", "ADMIN")) {
+            String jwt = valid(role);
+            client.get().uri(logs).headers(h -> h.setBearerAuth(jwt))
+                .header("X-Request-Id", "processing-42").exchange().expectStatus().isOk()
+                .expectHeader().valueEquals("X-Request-Id", "processing-42")
+                .expectBody(String.class).isEqualTo("/api/v1/historical-logs?start=2026-09-01T00:00:00Z&end=2026-09-02T00:00:00Z&hardwareId=HW-42&limit=25&cursor=next%2Bpage");
+        }
+        String operator = valid("OPERATOR");
+        String admin = valid("ADMIN");
+        String unknownRole = valid("ROOT");
+        client.get().uri(logs).headers(h -> h.setBearerAuth(unknownRole)).exchange().expectStatus().isForbidden();
+        client.get().uri("/api/processing/v1/metrics/history?metric=node.cpu.utilization&start=2026-09-01T00:00:00Z&end=2026-09-02T00:00:00Z&stepSeconds=30&cluster=lab&resourceId=node-1")
+            .headers(h -> h.setBearerAuth(operator)).exchange().expectStatus().isOk()
+            .expectBody(String.class).isEqualTo("/api/v1/metrics/history?metric=node.cpu.utilization&start=2026-09-01T00:00:00Z&end=2026-09-02T00:00:00Z&stepSeconds=30&cluster=lab&resourceId=node-1");
+        client.get().uri("/api/processing/v1/prediction/dataset?start=2026-09-01T00:00:00Z&end=2026-09-02T00:00:00Z&cluster=lab&resourceId=node-1&stepSeconds=60")
+            .headers(h -> h.setBearerAuth(admin)).header("X-Request-Id", "error-99")
+            .exchange().expectStatus().isEqualTo(422)
+            .expectHeader().valueEquals("X-Request-Id", "error-99")
+            .expectBody().json("{\"status\":422,\"detail\":\"invalid query\"}");
     }
     @Test void corsPreflightNeedsNoToken() {
         client.options().uri("/api/monitoring/v1/metrics/current")

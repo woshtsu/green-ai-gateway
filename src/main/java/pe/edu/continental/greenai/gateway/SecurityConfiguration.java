@@ -70,6 +70,9 @@ class SecurityConfiguration {
                 .pathMatchers(HttpMethod.GET, "/api/monitoring/v1/metrics/catalog",
                     "/api/monitoring/v1/metrics/current", "/api/monitoring/v1/metrics/history")
                     .hasAnyRole("OPERATOR", "ADMIN")
+                .pathMatchers(HttpMethod.GET, "/api/processing/v1/metrics/history",
+                    "/api/processing/v1/historical-logs", "/api/processing/v1/prediction/dataset")
+                    .hasAnyRole("OPERATOR", "ADMIN")
                 .anyExchange().denyAll())
             .exceptionHandling(errors -> errors
                 .authenticationEntryPoint((exchange, error) -> problem(exchange, HttpStatus.UNAUTHORIZED))

@@ -1,6 +1,6 @@
 # Green AI — API Gateway
 
-Punto de entrada HTTP del Frontend para los microservicios Green AI. El primer incremento publica únicamente el contrato confirmado de Monitoring; Data Processing se incorporará cuando su OpenAPI sea aprobado.
+Punto de entrada HTTP del Frontend para los microservicios Green AI. Publica rutas explícitas de Monitoring y Data Processing con sus contratos aprobados.
 
 Java 21 · Spring Boot 4.1.1 · Spring Cloud 2025.1.3 · Gateway Server WebFlux.
 
@@ -10,7 +10,7 @@ El Gateway enruta, reescribe prefijos, aplica CORS/timeouts y mantiene correlaci
 
 ```text
 Frontend → Gateway → Monitoring
-                   → Data Processing (cuando exista contrato)
+                   → Data Processing
 
 Data Processing → Monitoring / Supabase / Prediction
 ```
@@ -21,6 +21,7 @@ Monitoring debe estar accesible y su URL se configura explícitamente:
 
 ```powershell
 $env:GATEWAY_MONITORING_BASE_URL = 'http://127.0.0.1:8080'
+$env:GATEWAY_DATA_PROCESSING_BASE_URL = 'http://127.0.0.1:8000'
 $env:GATEWAY_AUTH_ISSUER_URI = 'https://<project-ref>.supabase.co/auth/v1'
 $env:GATEWAY_AUTH_JWK_SET_URI = 'https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json'
 $env:GATEWAY_CORS_ALLOWED_ORIGIN = 'http://127.0.0.1:3000'
@@ -39,18 +40,21 @@ Invoke-RestMethod 'http://127.0.0.1:8081/api/monitoring/v1/metrics/current?metri
 | `GET /api/monitoring/v1/metrics/catalog` | `/api/v1/metrics/catalog` |
 | `GET /api/monitoring/v1/metrics/current` | `/api/v1/metrics/current` |
 | `GET /api/monitoring/v1/metrics/history` | `/api/v1/metrics/history` |
+| `GET /api/processing/v1/metrics/history` | `/api/v1/metrics/history` |
+| `GET /api/processing/v1/historical-logs` | `/api/v1/historical-logs` |
+| `GET /api/processing/v1/prediction/dataset` | `/api/v1/prediction/dataset` |
 
-Los query parameters se conservan. No existe un proxy comodín. Las rutas de métricas exigen JWT: 401 sin token válido, 403 sin rol autorizado o para rutas/métodos no permitidos con sesión válida. El Gateway conserva las respuestas de Monitoring.
+Los query parameters se conservan. No existe un proxy comodín. Las rutas de Monitoring y Data Processing exigen JWT: 401 sin token válido, 403 sin rol autorizado o para rutas/métodos no permitidos con sesión válida. El Gateway conserva las respuestas funcionales y los errores contractuales de los servicios. Data Processing recibe un timeout del Gateway de 15 segundos, superior a su timeout interno de 10 segundos.
 
 ## JWT de Supabase Auth
 
 Validación obligatoria: firma ES256/RS256 por JWKS, issuer exacto, audience authenticated, expiración, subject y usuario no anónimo. El claim user_role debe ser OPERATOR o ADMIN; no existe rol por defecto ni bypass. Configurar el Custom Access Token Hook antes de usar el dashboard.
 
-Las consultas PowerShell de este README requieren la cabecera Authorization con Bearer y un access token. No pegar tokens en documentación ni Git. Health y OpenAPI son públicos; el resto se deniega salvo las tres rutas GET confirmadas. Actuator prometheus queda sin exposición pública autorizada.
+Las consultas PowerShell de este README requieren la cabecera Authorization con Bearer y un access token. No pegar tokens en documentación ni Git. Health y OpenAPI son públicos; el resto se deniega salvo las rutas GET documentadas. Actuator prometheus queda sin exposición pública autorizada.
 
 El Dockerfile ejecuta las pruebas durante la compilación con Java 21. Incluyen firma ES256 real con JWKS de prueba, expiración, issuer/audience incorrectos, roles, rutas y preflight CORS. No llaman al proyecto Supabase real.
 
-La superficie externa está versionada en [gateway-v0.1.yaml](src/main/resources/static/openapi/gateway-v0.1.yaml) y se sirve en `/openapi/gateway-v0.1.yaml`. El esquema completo de las respuestas pertenece al OpenAPI de Monitoring; el Gateway no mantiene una copia divergente.
+La superficie externa está versionada en [gateway-v0.1.yaml](src/main/resources/static/openapi/gateway-v0.1.yaml) y se sirve en `/openapi/gateway-v0.1.yaml`. Los esquemas completos de las respuestas pertenecen a los OpenAPI de Monitoring y Data Processing; el Gateway documenta sus nombres y conserva las respuestas upstream.
 
 ## Configuración
 
@@ -58,6 +62,7 @@ La superficie externa está versionada en [gateway-v0.1.yaml](src/main/resources
 | --- | --- | --- |
 | `GATEWAY_PORT` | `8081` | Puerto del Gateway |
 | `GATEWAY_MONITORING_BASE_URL` | `http://127.0.0.1:8080` | URL interna de Monitoring |
+| `GATEWAY_DATA_PROCESSING_BASE_URL` | `http://data-processing:8000` | URL interna de Data Processing |
 | `GATEWAY_CORS_ALLOWED_ORIGIN` | `http://127.0.0.1:3000` | Origen exacto permitido al Frontend |
 
 En Docker Compose usar `http://monitoring:8080`. En Kubernetes usar el DNS real del Service; nunca `localhost` entre contenedores o pods.
@@ -70,6 +75,9 @@ El navegador debe usar como base pública del API `http://127.0.0.1:8081` y llam
 GET /api/monitoring/v1/metrics/catalog
 GET /api/monitoring/v1/metrics/current
 GET /api/monitoring/v1/metrics/history
+GET /api/processing/v1/metrics/history
+GET /api/processing/v1/historical-logs
+GET /api/processing/v1/prediction/dataset
 ```
 
 Ejemplo mínimo para el adaptador HTTP del Frontend:
@@ -109,11 +117,11 @@ El compose del workspace usa `http://127.0.0.1:3001` por defecto y permite sobre
 - `/actuator/health/readiness`
 - `/actuator/prometheus`
 
-La salud del Gateway no garantiza que Monitoring tenga una fuente de métricas disponible. Esa condición se comunica en la consulta funcional mediante el error de Monitoring.
+La salud del Gateway no garantiza que Monitoring o Data Processing tengan sus fuentes disponibles. Esa condición se comunica en la consulta funcional mediante la respuesta del servicio correspondiente.
 
 ## Data Processing
 
-Data Processing consulta directamente la API interna de Monitoring para pipelines y lee históricos reales de Supabase con sus propias credenciales mínimas. El Gateway lo invocará solo para operaciones solicitadas por el Frontend. No se publican rutas de Data Processing hasta disponer de su OpenAPI.
+Data Processing consulta directamente la API interna de Monitoring para pipelines y lee históricos de Supabase con sus propias credenciales mínimas. El Gateway publica únicamente el histórico procesado, los logs históricos y la preparación provisional del dataset de predicción. Esta última ruta prepara datos; no ejecuta inferencia.
 
 El diseño y contrato propuesto están en [arquitectura-integracion-data-processing.md](arquitectura-integracion-data-processing.md).
 
@@ -123,4 +131,4 @@ El diseño y contrato propuesto están en [arquitectura-integracion-data-process
 .\mvnw.cmd -B -ntp verify
 ```
 
-Las pruebas comprueban que solo existe la ruta confirmada y que las rutas no registradas no se reenvían. La integración end-to-end requiere Monitoring en ejecución y se documentará separadamente.
+Las pruebas comprueban autenticación, roles, reescritura y preservación de query parameters para ambas integraciones, propagación de errores contractuales, correlación y rechazo de rutas no registradas. La integración end-to-end requiere los servicios internos en ejecución.
