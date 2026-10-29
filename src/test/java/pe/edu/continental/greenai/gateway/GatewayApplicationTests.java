@@ -27,7 +27,7 @@ class GatewayApplicationTests {
     }
     static final DisposableServer UPSTREAM = HttpServer.create().host("127.0.0.1").port(0)
         .handle((req,res) -> {
-            if (req.uri().equals("/v1/predictions")) return req.receive().aggregate().asString()
+            if (List.of("/v1/predictions", "/v1/recommendations", "/v1/energy").contains(req.uri())) return req.receive().aggregate().asString()
                 .flatMap(body -> res.header("Content-Type", "application/json").sendString(Mono.just(body)).then());
             if (req.uri().equals("/jwks")) return res.header("Content-Type", "application/json")
                 .sendString(Mono.just(new JWKSet(KEY.toPublicJWK()).toString()));
@@ -41,6 +41,7 @@ class GatewayApplicationTests {
         p.add("GATEWAY_MONITORING_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
         p.add("GATEWAY_DATA_PROCESSING_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
         p.add("GATEWAY_PREDICTION_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
+        p.add("GATEWAY_RECOMMENDATIONS_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
         p.add("gateway.auth.issuer", () -> ISSUER);
         p.add("gateway.auth.jwks", () -> "http://127.0.0.1:" + UPSTREAM.port() + "/jwks");
     }
@@ -141,5 +142,20 @@ class GatewayApplicationTests {
             .header("Access-Control-Request-Method", "POST")
             .header("Access-Control-Request-Headers", "authorization,content-type")
             .exchange().expectStatus().isOk();
+    }
+    @Test void recommendationRoutesRequireRoleAndPreserveBody() throws Exception {
+        for (String endpoint : List.of("recommendations", "energy")) {
+            String path = "/api/recommendations/v1/" + endpoint;
+            client.post().uri(path).exchange().expectStatus().isUnauthorized();
+            String unknown = valid("ROOT");
+            client.post().uri(path).headers(h -> h.setBearerAuth(unknown)).exchange().expectStatus().isForbidden();
+            for (String role : List.of("OPERATOR", "ADMIN")) {
+                String jwt = valid(role);
+                client.post().uri(path).headers(h -> h.setBearerAuth(jwt))
+                    .header("Content-Type", "application/json").bodyValue("{\"demo\":true}")
+                    .exchange().expectStatus().isOk().expectBody(String.class).isEqualTo("{\"demo\":true}");
+                client.get().uri(path).headers(h -> h.setBearerAuth(jwt)).exchange().expectStatus().isForbidden();
+            }
+        }
     }
 }

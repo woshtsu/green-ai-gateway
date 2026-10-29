@@ -2,12 +2,16 @@ openapi: 3.1.0
 info:
   title: Green AI API Gateway
   version: 0.1.0
-  description: Superficie externa confirmada para Monitoring y Data Processing. Se conservan los contratos funcionales upstream.
+  description: Superficie externa de Monitoring, Data Processing, Prediction y Recommendations. Se conservan los contratos funcionales upstream.
 servers:
   - url: /
 security:
   - bearerAuth: []
 paths:
+  /api/recommendations/v1/recommendations:
+    $ref: './recommendations-v1.json#/paths/~1api~1recommendations~1v1~1recommendations'
+  /api/recommendations/v1/energy:
+    $ref: './recommendations-v1.json#/paths/~1api~1recommendations~1v1~1energy'
   /api/prediction/v1/predictions:
     post:
       operationId: createPrediction

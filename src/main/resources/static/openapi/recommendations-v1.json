@@ -1,0 +1,620 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Green AI Recommendations via Gateway",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/recommendations/v1/recommendations": {
+      "post": {
+        "summary": "Recommend",
+        "operationId": "recommend_v1_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recommendation"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente o inválido"
+          },
+          "403": {
+            "description": "Rol insuficiente"
+          },
+          "413": {
+            "description": "Cuerpo demasiado grande"
+          },
+          "503": {
+            "description": "Servicio no disponible"
+          }
+        },
+        "description": "Requiere JWT con rol ADMIN u OPERATOR. Máximo 2 MB, timeout 30 s, sin reintentos."
+      }
+    },
+    "/api/recommendations/v1/energy": {
+      "post": {
+        "summary": "Energy",
+        "operationId": "energy_v1_energy_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnergyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnergyResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente o inválido"
+          },
+          "403": {
+            "description": "Rol insuficiente"
+          },
+          "413": {
+            "description": "Cuerpo demasiado grande"
+          },
+          "503": {
+            "description": "Servicio no disponible"
+          }
+        },
+        "description": "Requiere JWT con rol ADMIN u OPERATOR. Máximo 2 MB, timeout 30 s, sin reintentos."
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Check": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail",
+              "unknown"
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "status"
+        ],
+        "title": "Check"
+      },
+      "EnergyRequest": {
+        "properties": {
+          "origin": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated",
+              "estimated"
+            ],
+            "title": "Origin"
+          },
+          "samples": {
+            "items": {
+              "$ref": "#/components/schemas/PowerSample"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "minItems": 2,
+            "title": "Samples"
+          },
+          "emissionFactorKgPerKwh": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emissionfactorkgperkwh"
+          },
+          "emissionFactorSource": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emissionfactorsource"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origin",
+          "samples"
+        ],
+        "title": "EnergyRequest"
+      },
+      "EnergyResult": {
+        "properties": {
+          "origin": {
+            "type": "string",
+            "title": "Origin"
+          },
+          "energyKwh": {
+            "type": "number",
+            "title": "Energykwh"
+          },
+          "co2eKg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Co2Ekg"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "emissionFactorKgPerKwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emissionfactorkgperkwh"
+          },
+          "emissionFactorSource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emissionfactorsource"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "default": "trapezoidal_power_integration"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origin",
+          "energyKwh",
+          "co2eKg",
+          "start",
+          "end",
+          "emissionFactorKgPerKwh",
+          "emissionFactorSource",
+          "warnings"
+        ],
+        "title": "EnergyResult"
+      },
+      "Policy": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "demonstration",
+            "title": "Mode",
+            "default": "demonstration"
+          },
+          "cpuLowPercent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Cpulowpercent",
+            "default": 30
+          },
+          "cpuHighPercent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Cpuhighpercent",
+            "default": 80
+          },
+          "memoryMaxPercent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Memorymaxpercent",
+            "default": 85
+          },
+          "latencyP95MaxMs": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Latencyp95Maxms",
+            "default": 500
+          },
+          "errorRateMaxPercent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Errorratemaxpercent",
+            "default": 1
+          },
+          "freshnessSeconds": {
+            "type": "integer",
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "Freshnessseconds",
+            "default": 300
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Policy"
+      },
+      "PowerSample": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "watts": {
+            "type": "number",
+            "maximum": 1000000000000.0,
+            "minimum": 0.0,
+            "title": "Watts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "timestamp",
+          "watts"
+        ],
+        "title": "PowerSample"
+      },
+      "Problem": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "Problem"
+      },
+      "Recommendation": {
+        "properties": {
+          "recommendationId": {
+            "type": "string",
+            "title": "Recommendationid"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generatedat"
+          },
+          "predictionId": {
+            "type": "string",
+            "title": "Predictionid"
+          },
+          "inputDatasetId": {
+            "type": "string",
+            "title": "Inputdatasetid"
+          },
+          "predictedCpuPercent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Predictedcpupercent"
+          },
+          "telemetry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Telemetry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resource": {
+            "$ref": "#/components/schemas/Resource"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_evaluable",
+              "blocked",
+              "eligible_for_review"
+            ],
+            "title": "Status"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "none",
+              "maintain",
+              "review_capacity_reduction",
+              "review_capacity_increase"
+            ],
+            "title": "Action"
+          },
+          "executionAllowed": {
+            "type": "boolean",
+            "const": false,
+            "title": "Executionallowed",
+            "default": false
+          },
+          "policy": {
+            "$ref": "#/components/schemas/Policy"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/Check"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "recommendationId",
+          "generatedAt",
+          "predictionId",
+          "inputDatasetId",
+          "predictedCpuPercent",
+          "telemetry",
+          "resource",
+          "status",
+          "action",
+          "policy",
+          "checks",
+          "warnings"
+        ],
+        "title": "Recommendation"
+      },
+      "RecommendationRequest": {
+        "properties": {
+          "dataset": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Dataset"
+          },
+          "telemetry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Telemetry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dataset"
+        ],
+        "title": "RecommendationRequest"
+      },
+      "Resource": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "node",
+            "title": "Type"
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "cluster": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Cluster"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "cluster"
+        ],
+        "title": "Resource"
+      },
+      "Telemetry": {
+        "properties": {
+          "resource": {
+            "$ref": "#/components/schemas/Resource"
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observedat"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated"
+            ],
+            "title": "Origin"
+          },
+          "memoryPercent": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memorypercent"
+          },
+          "latencyP95Ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latencyp95Ms"
+          },
+          "errorRatePercent": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorratepercent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resource",
+          "observedAt",
+          "origin"
+        ],
+        "title": "Telemetry"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}

@@ -73,7 +73,8 @@ class SecurityConfiguration {
                 .pathMatchers(HttpMethod.GET, "/api/processing/v1/metrics/history",
                     "/api/processing/v1/historical-logs", "/api/processing/v1/prediction/dataset")
                     .hasAnyRole("OPERATOR", "ADMIN")
-                .pathMatchers(HttpMethod.POST, "/api/prediction/v1/predictions")
+                .pathMatchers(HttpMethod.POST, "/api/prediction/v1/predictions",
+                    "/api/recommendations/v1/recommendations", "/api/recommendations/v1/energy")
                     .hasAnyRole("OPERATOR", "ADMIN")
                 .anyExchange().denyAll())
             .exceptionHandling(errors -> errors
