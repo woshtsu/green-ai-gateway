@@ -37,7 +37,7 @@ spring:
               metadata:
                 response-timeout: 30000
             - id: recommendations
-              uri: ${GATEWAY_RECOMMENDATIONS_BASE_URL:http://recommendations:8000}
+              uri: ${GATEWAY_PREDICTION_BASE_URL:http://prediction:8000}
               predicates:
                 - Path=/api/recommendations/v1/recommendations,/api/recommendations/v1/energy
                 - Method=POST

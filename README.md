@@ -45,6 +45,13 @@ Invoke-RestMethod 'http://127.0.0.1:8081/api/monitoring/v1/metrics/current?metri
 | `GET /api/processing/v1/historical-logs` | `/api/v1/historical-logs` |
 | `GET /api/processing/v1/prediction/dataset` | `/api/v1/prediction/dataset` |
 | `POST /api/prediction/v1/predictions` | `/v1/predictions` |
+| `POST /api/recommendations/v1/recommendations` | `/v1/recommendations` en Prediction |
+| `POST /api/recommendations/v1/energy` | `/v1/energy` en Prediction |
+
+Recomendaciones y cálculo energético son responsabilidades de Prediction. Ambas rutas
+usan `GATEWAY_PREDICTION_BASE_URL`; ya no existe un destino independiente
+`GATEWAY_RECOMMENDATIONS_BASE_URL`. Se conservan los prefijos públicos para que el
+frontend siga funcionando, con JWT, roles ADMIN/OPERATOR, máximo 2 MB y timeout de 30 s.
 
 Los query parameters se conservan. No existe un proxy comodín. Las rutas de Monitoring y Data Processing exigen JWT: 401 sin token válido, 403 sin rol autorizado o para rutas/métodos no permitidos con sesión válida. El Gateway conserva las respuestas funcionales y los errores contractuales de los servicios. Data Processing recibe un timeout del Gateway de 15 segundos, superior a su timeout interno de 10 segundos.
 

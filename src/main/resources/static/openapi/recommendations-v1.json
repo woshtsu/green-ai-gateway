@@ -1,12 +1,16 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Green AI Recommendations via Gateway",
+    "title": "Prediction recommendations via Gateway",
+    "description": "Internal API for short-term computational demand estimates.",
     "version": "1.0.0"
   },
   "paths": {
     "/api/recommendations/v1/recommendations": {
       "post": {
+        "tags": [
+          "Recommendations"
+        ],
         "summary": "Recommend",
         "operationId": "recommend_v1_recommendations_post",
         "requestBody": {
@@ -30,12 +34,30 @@
               }
             }
           },
-          "422": {
-            "description": "Unprocessable Content",
+          "400": {
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Problem"
+                  "$ref": "#/components/schemas/InferenceProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Problem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InferenceProblem"
+                    }
+                  ],
+                  "title": "Response 422 Recommend V1 Recommendations Post"
                 }
               }
             }
@@ -50,12 +72,12 @@
               }
             }
           },
-          "504": {
-            "description": "Gateway Timeout",
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Problem"
+                  "$ref": "#/components/schemas/InferenceProblem"
                 }
               }
             }
@@ -69,15 +91,18 @@
           "413": {
             "description": "Cuerpo demasiado grande"
           },
-          "503": {
-            "description": "Servicio no disponible"
+          "504": {
+            "description": "Timeout del Gateway"
           }
         },
-        "description": "Requiere JWT con rol ADMIN u OPERATOR. Máximo 2 MB, timeout 30 s, sin reintentos."
+        "description": "Responsabilidad de Prediction. JWT ADMIN/OPERATOR; máximo 2 MB, timeout 30 s y sin reintentos."
       }
     },
     "/api/recommendations/v1/energy": {
       "post": {
+        "tags": [
+          "Recommendations"
+        ],
         "summary": "Energy",
         "operationId": "energy_v1_energy_post",
         "requestBody": {
@@ -102,7 +127,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -120,11 +145,11 @@
           "413": {
             "description": "Cuerpo demasiado grande"
           },
-          "503": {
-            "description": "Servicio no disponible"
+          "504": {
+            "description": "Timeout del Gateway"
           }
         },
-        "description": "Requiere JWT con rol ADMIN u OPERATOR. Máximo 2 MB, timeout 30 s, sin reintentos."
+        "description": "Responsabilidad de Prediction. JWT ADMIN/OPERATOR; máximo 2 MB, timeout 30 s y sin reintentos."
       }
     }
   },
@@ -288,6 +313,44 @@
           "warnings"
         ],
         "title": "EnergyResult"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InferenceProblem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "details"
+        ],
+        "title": "InferenceProblem"
       },
       "Policy": {
         "properties": {
@@ -597,6 +660,46 @@
           "origin"
         ],
         "title": "Telemetry"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     },
     "securitySchemes": {

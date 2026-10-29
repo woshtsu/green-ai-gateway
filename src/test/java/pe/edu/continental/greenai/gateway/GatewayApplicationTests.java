@@ -41,7 +41,6 @@ class GatewayApplicationTests {
         p.add("GATEWAY_MONITORING_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
         p.add("GATEWAY_DATA_PROCESSING_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
         p.add("GATEWAY_PREDICTION_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
-        p.add("GATEWAY_RECOMMENDATIONS_BASE_URL", () -> "http://127.0.0.1:" + UPSTREAM.port());
         p.add("gateway.auth.issuer", () -> ISSUER);
         p.add("gateway.auth.jwks", () -> "http://127.0.0.1:" + UPSTREAM.port() + "/jwks");
     }
